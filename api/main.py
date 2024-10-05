@@ -3,9 +3,11 @@ from pydantic import BaseModel
 import json
 import re
 import os
+import docker
 
 
 app = FastAPI()
+client = docker.from_env()
 
 TEST_CASES_DIR = os.path.join(os.path.dirname(__file__), "test_cases")
 
@@ -19,7 +21,7 @@ class CodeSubmission(BaseModel):
 
 def sanitize_code(code: str) -> str:
     # import statementの削除
-    sanitize_code = re.sub(r'import\s+\w+', '', code')
+    sanitize_code = re.sub(r'import\s+\w+', '', code)
     # __ を含む特殊属性の使用を禁止
     sanitize_code = re.sub(r'__\w+__', '', sanitize_code)
     # other sanitization
@@ -28,7 +30,7 @@ def sanitize_code(code: str) -> str:
     return sanitize_code
 
 # テストケースの読み込み
-def load_test_cases(problem_id: int):
+def load_test_cases(problem_id: int) -> list[dict[str, str]]:
     test_case_file_path = os.path.join(TEST_CASES_DIR, f"{problem_id}.json")
 
     # テストケースファイルの存在確認
@@ -41,46 +43,80 @@ def load_test_cases(problem_id: int):
 
     return test_cases
 
+# サンドボックス環境でコードを実行
+def execute_code_in_sandbox(code: str, input_data: str) -> str:
+    try:
+        script_content = f"""
+input_data = "{input_data}"
+print(eval("{sanitize_code(code)}"))
+"""
+
+        script_path = os.path.join("/tmp", "script.py")
+        with open(script_path, "w") as f:
+            f.write(script_content)
+
+        container = client.containers.run(
+            image="python-sandbox",
+            command=["python3", "/sandbox/script.py"],
+            volumes={script_path: {"bind": "/sandbox/script.py", "mode": "ro"}},
+            working_dir="/sandbox",
+            user="sandboxuser",
+            detach=True,
+            remove=True,
+        )
+
+        logs = container.logs().decode("utf-8")
+        return logs.strip()
+    except Exception as e:
+        return str(e)
+
 @app.post("/api/submit")
 async def submit_code(code_submission: CodeSubmission):
     # コードのサニタイズ
-    code = sanitize_code(code_submission.code)
+    sanitized_code: str = sanitize_code(code_submission.code)
 
     # テストケースの読み込み
-    problem_id = code_submission.problem_id
+    problem_id: str = code_submission.problem_id
     try:
         test_cases = load_test_cases(problem_id)
     except HTTPException as e:
         raise e
 
     # テストケースの実行
-    results = []
-    all_tests_passed = True
-    for i, test_case in enumerate(test_cases):
-        input_data = test_case["input"]
-        expected_output = test_case["output"]
+    results: list[dict[str, str]] = []
+    all_tests_passed: bool = True
 
-        # コードの実行
+    for test_case in test_cases:
+        input_data: str = test_case["input"]
+        expected_output: str = test_case["output"]
         try:
-            exec(code)
-            result = eval(f"main({input_data})")
+            output: str = execute_code_in_sandbox(sanitized_code, input_data)
+
+            passed: bool = output == expected_output
+            results.append({
+                "input": input_data,
+                "expected_output": expected_output,
+                "output": output,
+                "passed": passed,
+            })
+
+            if not passed:
+                all_tests_passed = False
+
         except Exception as e:
-            result = f"Error: {e}"
+            results.append({
+                "input": input_data,
+                "expected_output": expected_output,
+                "output": str(e),
+                "passed": False,
+            })
+            all_tests_passed = False
 
-        # テスト結果の判定
-        if result == expected_output:
-            status = "AC"
-        else:
-            status = "WA"
+    return {
+        "all_tests_passed": all_tests_passed,
+        "results": results,
+    }
 
-        results.append({
-            "test_case": i + 1,
-            "status": status,
-            "result": result,
-            "expected_output": expected_output
-        })
-
-    return results
 
 
 
