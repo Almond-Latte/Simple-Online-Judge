@@ -1,1 +1,16 @@
-.idea
+# OS Generated Files
+.DS_Store
+Thumbs.db
+
+# Node.js (next-app) Directories
+next-app/node_modules
+next-app/.next
+next-app/.env
+next-app/npm-debug.log*
+next-app/yarn-debug.log*
+next-app/yarn-error.log*
+
+# IDE/Editor Directories
+.vscode/
+.idea/
+*.swp
