@@ -2,6 +2,7 @@ import { markdownToHtml } from '@/utils/markdownToHtml';
 import fs from 'fs';
 import path from 'path';
 import 'github-markdown-css/github-markdown.css'; // GitHubのMarkdownスタイルをインポート
+import ProblemForm from './ProblemForm';
 
 interface ProblemPageProps {
     params: {
@@ -33,6 +34,9 @@ const ProblemPage = async ({ params }: ProblemPageProps) => {
 
                 {/* GitHubスタイルのMarkdownを適用 */}
                 <div className="markdown-body" dangerouslySetInnerHTML={{ __html: htmlContent }} />
+
+                {/* 問題の提出フォーム */}
+                <ProblemForm problemId={id} />
 
             </div>
         </div>
