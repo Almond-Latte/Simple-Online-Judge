@@ -43,8 +43,10 @@ const ProblemForm = ({ problemId }: ProblemFormProps) => {
         setIsSubmitting(true); // 提出中状態に変更
 
         try {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+
             // FastAPIのエンドポイントに直接リクエスト
-            const response = await fetch('http://localhost:8000/api/submit', { // FastAPIのURLに変更
+            const response = await fetch(`${apiUrl}/api/submit`, { // FastAPIのURLに変更
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
