@@ -1,0 +1,21 @@
+services:
+  next-app:
+    build:
+      context: ./next-app
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./next-app:/app
+    depends_on:
+      - api
+    environment:
+      - NODE_ENV=development
+
+    api:
+      build:
+        context: ./api
+        dockerfile: Dockerfile
+      volumes:
+        - ./api:/app
+        - /var/run/docker.sock:/var/run/docker.sock
