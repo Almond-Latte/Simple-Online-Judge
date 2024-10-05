@@ -8,4 +8,4 @@ RUN chown -R sandboxuser:sandboxuser /sandbox
 
 USER sandboxuser
 
-CMD ["python3", "script.py"]
+CMD ["tail", "-f", "/dev/null"]
