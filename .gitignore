@@ -10,6 +10,20 @@ next-app/npm-debug.log*
 next-app/yarn-debug.log*
 next-app/yarn-error.log*
 
+# Python (api) Directories
+api/.venv
+api/__pycache__/
+api/*.py[cod]
+api/Pipfile.lock
+api/.env
+
+# Docker
+docker-compose.override.yml
+*.env
+
+# Logs
+*.log
+
 # IDE/Editor Directories
 .vscode/
 .idea/
